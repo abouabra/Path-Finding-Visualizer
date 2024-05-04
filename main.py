@@ -1,10 +1,13 @@
 import pygame
-from queue import PriorityQueue
-from collections import deque
+from algorithms import A_star, BFS, DFS, GBFS, Dijkstra
+from maze import generate_maze
+from node import Node
 
-WIDTH = 800
-WIN = pygame.display.set_mode((WIDTH + 300, WIDTH))
+WIDTH = 600
+WIN = pygame.display.set_mode((WIDTH + 400, WIDTH))
 pygame.display.set_caption("Path Finding Algorithm")
+pygame.font.init()
+# IMG = pygame.image.load("assets/rules.jpg")
 
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
@@ -14,74 +17,9 @@ PURPLE = (128, 0, 128)
 ORANGE = (255, 165, 0)
 GREY = (128, 128, 128)
 TURQUOISE = (64, 224, 208)
-
-
-class Node:
-    def __init__(self, row, col, width, total_rows):
-        self.row = row
-        self.col = col
-        self.x = row * width
-        self.y = col * width
-        self.color = WHITE
-        self.neighbors = []
-        self.width = width
-        self.total_rows = total_rows
-
-    def get_pos(self):
-        return self.row, self.col
-
-    def is_closed(self):
-        return self.color == RED
-
-    def is_open(self):
-        return self.color == GREEN
-
-    def is_barrier(self):
-        return self.color == BLACK
-
-    def is_start(self):
-        return self.color == ORANGE
-
-    def is_end(self):
-        return self.color == TURQUOISE
-
-    def reset(self):
-        self.color = WHITE
-
-    def make_closed(self):
-        self.color = RED
-
-    def make_open(self):
-        self.color = GREEN
-
-    def make_barrier(self):
-        self.color = BLACK
-
-    def make_start(self):
-        self.color = ORANGE
-
-    def make_end(self):
-        self.color = TURQUOISE
-
-    def make_path(self):
-        self.color = PURPLE
-
-    def draw(self, win):
-        pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.width))
-
-    def update_neighbors(self, grid):
-        if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col].is_barrier(): # Down
-            self.neighbors.append(grid[self.row + 1][self.col])
-        
-        if self.row > 0 and not grid[self.row - 1][self.col].is_barrier(): # Up
-            self.neighbors.append(grid[self.row - 1][self.col])
-
-        if self.col < self.total_rows - 1 and not grid[self.row][self.col + 1].is_barrier(): # Right
-            self.neighbors.append(grid[self.row][self.col + 1])
-        
-        if self.col > 0 and not grid[self.row][self.col - 1].is_barrier(): # Left
-            self.neighbors.append(grid[self.row][self.col - 1])
-
+algo_index = 0
+start = None
+end = None
 
 def make_grid(rows, width):
     grid = []
@@ -100,11 +38,8 @@ def draw_grid(win, rows, width):
         pygame.draw.line(win, GREY, (0, i * gap), (width, i * gap))
         for j in range(rows):
             pygame.draw.line(win, GREY, (j * gap, 0), (j * gap, width))
-    pygame.draw.line(win, GREY, (width, 0), (width, width))
 
 def draw(win, grid, rows, width):
-    win.fill(GREY)
-
     for row in grid:
         for node in row:
             node.draw(win)
@@ -125,159 +60,88 @@ def get_clicked_pos(pos, rows, width):
 
     return row, col
 
-def draw_path(came_from, current, draw):
-    while current in came_from:
-        current = came_from[current]
-        current.make_path()
-        draw()
+def draw_panel(win):
+    win.fill(WHITE)
+    header_font = pygame.font.Font("assets/Akshar-Regular.ttf", 70)
+    rules_font = pygame.font.Font("assets/Akshar-Regular.ttf", 30)
+    
+    click_and_play = header_font.render("Click & Play!", True, (0, 0, 0))
+    win.blit(click_and_play, (WIDTH + 40, 20))
+   
+    have_fun = header_font.render("Have Fun!", True, (0, 0, 0))
+    win.blit(have_fun, (WIDTH + 77, 680))
 
-def A_star(draw, grid, start, end):
+    # Draw the rules
+    rules_lines = [
+        "Left-click:",
+        "    Set Start (Orange) &",
+        "    End (Turquoise)",
+        "Drag:",
+        "    Draw Obstacles (Black)",
+        "A:",
+        "    Switch Algorithm",
+        "     ",
+        "M:",
+        "    Generate Random Map",
+    ]
 
-    def heuristic_cost_estimate(p1, p2):
-        cache = {}
-        x1, y1 = p1
-        x2, y2 = p2
+    text_surfaces = []
+    text_positions = []
 
-        if (x1, y1, x2, y2) in cache:
-            return cache[(x1, y1, x2, y2)]
+    for i, line in enumerate(rules_lines):
+        font_color = (0, 0, 0)  # Default color
 
-        res = abs(x1 - x2) + abs(y1 - y2)
-        cache[(x1, y1, x2, y2)] = res    
-        return res
+        if "Start" in line:
+            font_color = (255, 165, 0)  # Orange
+        elif "End" in line:
+            font_color = (64, 224, 208)  # Turquoise
 
+        text_surface = rules_font.render(line, True, font_color)
+        text_positions.append((WIDTH + 30, 150 + i * 40))
+        text_surfaces.append(text_surface)
 
+    for surface, position in zip(text_surfaces, text_positions):
+        win.blit(surface, position)
 
-    count = 0
-    open_set = PriorityQueue()
-    open_set.put((0, count, start))
-    came_from = {}
-    g_score = {node: float("inf") for row in grid for node in row}
-    g_score[start] = 0
-    f_score = {node: float("inf") for row in grid for node in row}
-    f_score[start] = heuristic_cost_estimate(start.get_pos(), end.get_pos())
+    # Draw the algorithm line
+    algo_text_surfaces = []
+    algo_text_positions = []
+    algorithms = ["A*", "BFS", "DFS", "GBFS", "Dijkstra"]
+    total_algo = ""
 
-    open_set_hash = {start}
+    for i, algo in enumerate(algorithms):
+        font_color = (0, 0, 0)  # Default color
+        if i == algo_index:
+            font_color = (255, 0, 0)  # Red for selected
+        algo = f"{algo}/" if i < len(algorithms) - 1 else algo
+        text_surface = rules_font.render(algo, True, font_color)
+        algo_text_surfaces.append(text_surface)
+        text_position = (WIDTH + 53 + len(total_algo) * 13 , 430)
+        total_algo += algo
+        algo_text_positions.append(text_position)
 
-    while not open_set.empty():
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT or pygame.key.get_pressed()[pygame.K_ESCAPE]:
-                return -1
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    return 0
+    for surface, position in zip(algo_text_surfaces, algo_text_positions):
+        win.blit(surface, position)
 
-        current = open_set.get()[2]
-        open_set_hash.remove(current)
+def make_maze(grid):
+    global start, end
+    start, end = generate_maze(grid, len(grid))
 
-        if current == end:
-            draw_path(came_from, end, draw)
-            return 1
-
-        for neighbor in current.neighbors:
-            temp_g_score = g_score[current] + 1
-
-            if temp_g_score < g_score[neighbor]:
-                came_from[neighbor] = current
-                g_score[neighbor] = temp_g_score
-                f_score[neighbor] = temp_g_score + heuristic_cost_estimate(neighbor.get_pos(), end.get_pos())
-                if neighbor not in open_set_hash:
-                    count += 1
-                    open_set.put((f_score[neighbor], count, neighbor))
-                    open_set_hash.add(neighbor)
-                    neighbor.make_open()
-
-        draw()
-
-        if current != start:
-            current.make_closed()
-    return 0
-
-def BFS(draw, start, end):
-    queue = deque()
-    queue.append(start)
-    visited = set()
-    visited.add(start)
-    came_from = {}
-
-    while queue:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT or pygame.key.get_pressed()[pygame.K_ESCAPE]:
-                return -1
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    return 0
-
-        current = queue.popleft()
-
-        if current == end:
-            draw_path(came_from, end, draw)
-            return 1
-
-        for neighbor in current.neighbors:
-            if neighbor not in visited:
-                visited.add(neighbor)
-                came_from[neighbor] = current
-                queue.append(neighbor)
-                neighbor.make_open()
-
-        draw()
-
-        if current != start:
-            current.make_closed()
-    return 0
-
-def DFS(draw, start, end):
-    stack = []
-    stack.append(start)
-    visited = set()
-    visited.add(start)
-    came_from = {}
-
-    while stack:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT or pygame.key.get_pressed()[pygame.K_ESCAPE]:
-                return -1
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    return 0
-
-        current = stack.pop()
-
-        if current == end:
-            draw_path(came_from, end, draw)
-            return 1
-
-        for neighbor in current.neighbors:
-            if neighbor not in visited:
-                visited.add(neighbor)
-                came_from[neighbor] = current
-                stack.append(neighbor)
-                neighbor.make_open()
-
-        draw()
-        if current != start:
-            current.make_closed()
-    return 0
-
-
-def draw_help_text(win):
-    # pygame.draw.rect(win, GREY, (WIDTH, 0, 300, WIDTH))
-    # pygame.display.update()
-    pass
-
-
-def main(win, width):
+def game(win, width):
     ROWS = 50
     grid = make_grid(ROWS, width)
 
-    start = None
-    end = None
+    global algo_index
+    algorithms = [A_star, BFS, DFS, GBFS, Dijkstra]
+    global start, end
+
+
 
     finished = False
     run = True
     while run:
         draw(win, grid, ROWS, width)
-        draw_help_text(win)
+        draw_panel(win)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT or pygame.key.get_pressed()[pygame.K_ESCAPE]: # Quit the game
@@ -321,9 +185,7 @@ def main(win, width):
                         for node in row:
                             node.update_neighbors(grid)
                     
-                    result = A_star(lambda: draw(win, grid, ROWS, width), grid, start, end)
-                    # result = BFS(lambda: draw(win, grid, ROWS, width), start, end)
-                    # result = DFS(lambda: draw(win, grid, ROWS, width), start, end)
+                    result = algorithms[algo_index](lambda: draw(win, grid, ROWS, width), grid, start, end)
                     if result == -1:
                         run = False
 
@@ -334,8 +196,16 @@ def main(win, width):
                     end = None
                     grid = make_grid(ROWS, width)
                     finished = False
-        
+                
+                if event.key == pygame.K_a:
+                    algo_index = (algo_index + 1) % len(algorithms)  # Wrap around the list
+
+                if event.key == pygame.K_m:
+                    grid = make_grid(ROWS, width)
+                    make_maze(grid)
+                    finished = False
+
     pygame.quit()
 
 if __name__ == "__main__":
-    main(WIN, WIDTH)
+    game(WIN, WIDTH)
