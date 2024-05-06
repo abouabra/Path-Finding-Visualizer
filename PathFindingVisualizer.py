@@ -6,7 +6,7 @@ import cProfile
 import random
 
 ROWS = 51
-DEFAULT_WIDTH = 600
+DEFAULT_WIDTH = 1000
 assert ROWS % 2 != 0, "Rows must be odd!"
 WIDTH = DEFAULT_WIDTH if DEFAULT_WIDTH % ROWS == 0 else DEFAULT_WIDTH - DEFAULT_WIDTH % ROWS
 WIN = pygame.display.set_mode((WIDTH + 400, WIDTH))
