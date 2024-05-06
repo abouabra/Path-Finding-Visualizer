@@ -41,6 +41,7 @@ class Node:
 
     def reset(self):
         self.color = WHITE
+        self.neighbors = []
 
     def make_closed(self):
         self.color = RED
@@ -61,7 +62,7 @@ class Node:
         self.color = PURPLE
 
     def draw(self, win):
-        pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.width))
+        pygame.draw.rect(win, self.color, (self.x + 1, self.y + 1, self.width -1 , self.width -1))
 
     def update_neighbors(self, grid):
         if self.row < self.total_rows - 1 and not grid[self.row + 1][self.col].is_barrier(): # Down

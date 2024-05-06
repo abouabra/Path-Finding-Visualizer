@@ -2,28 +2,23 @@ from queue import PriorityQueue
 from collections import deque
 import pygame
 
+ORANGE = (255, 165, 0)
+TURQUOISE = (64, 224, 208)
 
 def draw_path(came_from, current, draw):
     while current in came_from:
         current = came_from[current]
-        current.make_path()
+        if current.color != ORANGE and current.color != TURQUOISE:
+            current.make_path()
         draw()
 
 def A_star(draw, grid, start, end):
 
     def heuristic_cost_estimate(p1, p2):
-        cache = {}
         x1, y1 = p1
         x2, y2 = p2
 
-        if (x1, y1, x2, y2) in cache:
-            return cache[(x1, y1, x2, y2)]
-
-        res = abs(x1 - x2) + abs(y1 - y2)
-        cache[(x1, y1, x2, y2)] = res    
-        return res
-
-
+        return abs(x1 - x2) + abs(y1 - y2)
 
     count = 0
     open_set = PriorityQueue()
@@ -53,7 +48,6 @@ def A_star(draw, grid, start, end):
 
         for neighbor in current.neighbors:
             temp_g_score = g_score[current] + 1
-
             if temp_g_score < g_score[neighbor]:
                 came_from[neighbor] = current
                 g_score[neighbor] = temp_g_score
@@ -62,12 +56,17 @@ def A_star(draw, grid, start, end):
                     count += 1
                     open_set.put((f_score[neighbor], count, neighbor))
                     open_set_hash.add(neighbor)
-                    neighbor.make_open()
+                    if neighbor.color != ORANGE and neighbor.color != TURQUOISE:
+                        neighbor.make_open()
+                    neighbor.updated = True
 
         draw()
 
         if current != start:
-            current.make_closed()
+            if current.color != ORANGE and current.color != TURQUOISE:
+                current.make_closed()
+            current.updated = True
+
     return 0
 
 def BFS(draw, grid, start, end):
@@ -96,12 +95,14 @@ def BFS(draw, grid, start, end):
                 visited.add(neighbor)
                 came_from[neighbor] = current
                 queue.append(neighbor)
-                neighbor.make_open()
+                if neighbor.color != ORANGE and neighbor.color != TURQUOISE:
+                    neighbor.make_open()
 
         draw()
 
         if current != start:
-            current.make_closed()
+            if current.color != ORANGE and current.color != TURQUOISE:
+                current.make_closed()
     return 0
 
 def DFS(draw, grid, start, end):
@@ -130,11 +131,13 @@ def DFS(draw, grid, start, end):
                 visited.add(neighbor)
                 came_from[neighbor] = current
                 stack.append(neighbor)
-                neighbor.make_open()
+                if neighbor.color != ORANGE and neighbor.color != TURQUOISE:
+                    neighbor.make_open()
 
         draw()
         if current != start:
-            current.make_closed()
+            if current.color != ORANGE and current.color != TURQUOISE:
+                current.make_closed()
     return 0
 
 def GBFS(draw, grid, start, end):
@@ -175,12 +178,14 @@ def GBFS(draw, grid, start, end):
                 visited.add(neighbor)
                 came_from[neighbor] = current
                 queue.put((heuristic_cost_estimate(neighbor.get_pos(), end.get_pos()), neighbor))
-                neighbor.make_open()
+                if neighbor.color != ORANGE and neighbor.color != TURQUOISE:
+                    neighbor.make_open()
 
         draw()
 
         if current != start:
-            current.make_closed()
+            if current.color != ORANGE and current.color != TURQUOISE:
+                current.make_closed()
     return 0
 
 def Dijkstra(draw, grid, start, end):
@@ -213,10 +218,12 @@ def Dijkstra(draw, grid, start, end):
                 came_from[neighbor] = current
                 g_score[neighbor] = temp_g_score
                 queue.put((g_score[neighbor], neighbor))
-                neighbor.make_open()
+                if neighbor.color != ORANGE and neighbor.color != TURQUOISE:
+                    neighbor.make_open()
 
         draw()
 
         if current != start:
-            current.make_closed()
+            if current.color != ORANGE and current.color != TURQUOISE:
+                current.make_closed()
     return 0
