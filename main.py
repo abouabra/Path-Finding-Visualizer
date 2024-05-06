@@ -3,8 +3,12 @@ from algorithms import A_star, BFS, DFS, GBFS, Dijkstra
 from maze import generate_maze
 from node import Node
 import cProfile
+import random
 
-WIDTH = 600
+ROWS = 51
+assert ROWS % 2 != 0, "Rows must be odd!"
+DEFAULT_WIDTH = 600
+WIDTH = DEFAULT_WIDTH if DEFAULT_WIDTH % ROWS == 0 else DEFAULT_WIDTH - DEFAULT_WIDTH % ROWS
 WIN = pygame.display.set_mode((WIDTH + 400, WIDTH))
 pygame.display.set_caption("Path Finding Algorithm")
 pygame.font.init()
@@ -33,13 +37,6 @@ def make_grid(rows, width):
 			grid[i].append(node)
 
 	return grid
-
-def draw_grid(win, rows, width):
-	gap = width // rows
-	for i in range(rows):
-		pygame.draw.line(win, GREY, (0, i * gap), (width, i * gap))
-		for j in range(rows):
-			pygame.draw.line(win, GREY, (j * gap, 0), (j * gap, width))
 
 def draw(win, grid, rows, width):
 	for row in grid:
@@ -81,6 +78,10 @@ def draw_panel(win):
 		"     ",
 		"M:",
 		"    Generate Random Map",
+		"C:",
+		"    Clear Board",
+		"Space:",
+		"    Start / Stop Algorithm"
 	]
 
 	text_surfaces = []
@@ -122,12 +123,29 @@ def update_algo(win, algo_index, rules_font):
 	for surface, position in zip(algo_text_surfaces, algo_text_positions):
 		win.blit(surface, position)
 
-def make_maze(grid):
+def make_maze(grid, rows, width):
 	global start, end
-	start, end = generate_maze(grid, len(grid))
+
+	gap = width // rows
+
+	start_pos = (random.randint(1, rows - 2), random.randint(1, rows - 2))
+	
+	generate_maze(grid, start_pos[0], start_pos[1], rows)
+	
+	start = Node(start_pos[1], start_pos[0], gap, rows)
+	start.make_start()
+	grid[start_pos[1]][start_pos[0]] = start
+
+	
+	end_pos = (random.randint(1, rows - 2), random.randint(1, rows - 2))
+	while end_pos == start_pos:
+		end_pos = (random.randint(1, rows - 2), random.randint(1, rows - 2))
+	end = Node(end_pos[1], end_pos[0], gap, rows)
+	end.make_end()
+	grid[end_pos[1]][end_pos[0]] = end
+
 
 def game(win, width):
-	ROWS = 50
 	grid = make_grid(ROWS, width)
 
 	global algo_index
@@ -210,8 +228,8 @@ def game(win, width):
 				if event.key == pygame.K_m:
 					for row in grid:
 						for node in row:
-							node.reset()
-					make_maze(grid)
+							node.make_barrier()
+					make_maze(grid, ROWS, width)
 
 		pygame.display.update()
 
