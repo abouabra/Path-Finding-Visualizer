@@ -6,11 +6,14 @@ ORANGE = (255, 165, 0)
 TURQUOISE = (64, 224, 208)
 
 def draw_path(came_from, current, draw):
+    path_length = 0
     while current in came_from:
+        path_length += 1
         current = came_from[current]
         if current.color != ORANGE and current.color != TURQUOISE:
             current.make_path()
         draw()
+    return path_length
 
 def A_star(draw, grid, start, end):
 
@@ -28,23 +31,25 @@ def A_star(draw, grid, start, end):
     g_score[start] = 0
     f_score = {node: float("inf") for row in grid for node in row}
     f_score[start] = heuristic_cost_estimate(start.get_pos(), end.get_pos())
-
     open_set_hash = {start}
+    path_length = 0
+    explored_nodes = 0
 
     while not open_set.empty():
         for event in pygame.event.get():
             if event.type == pygame.QUIT or pygame.key.get_pressed()[pygame.K_ESCAPE]:
-                return -1
+                return (-1, -1)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    return 0
+                    return (0, 0)
 
+        explored_nodes += 1
         current = open_set.get()[2]
         open_set_hash.remove(current)
 
         if current == end:
-            draw_path(came_from, end, draw)
-            return 1
+            path_length = draw_path(came_from, end, draw)
+            return explored_nodes, path_length
 
         for neighbor in current.neighbors:
             temp_g_score = g_score[current] + 1
@@ -67,7 +72,7 @@ def A_star(draw, grid, start, end):
                 current.make_closed()
             current.updated = True
 
-    return 0
+    return explored_nodes, path_length
 
 def BFS(draw, grid, start, end):
     queue = deque()
@@ -75,20 +80,22 @@ def BFS(draw, grid, start, end):
     visited = set()
     visited.add(start)
     came_from = {}
-
+    path_length = 0
+    explored_nodes = 0
     while queue:
         for event in pygame.event.get():
             if event.type == pygame.QUIT or pygame.key.get_pressed()[pygame.K_ESCAPE]:
-                return -1
+                return (-1, -1)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    return 0
+                    return (0, 0)
 
+        explored_nodes += 1
         current = queue.popleft()
 
         if current == end:
-            draw_path(came_from, end, draw)
-            return 1
+            path_length = draw_path(came_from, end, draw)
+            return explored_nodes, path_length
 
         for neighbor in current.neighbors:
             if neighbor not in visited:
@@ -103,7 +110,7 @@ def BFS(draw, grid, start, end):
         if current != start:
             if current.color != ORANGE and current.color != TURQUOISE:
                 current.make_closed()
-    return 0
+    return explored_nodes, path_length
 
 def DFS(draw, grid, start, end):
     stack = []
@@ -111,20 +118,23 @@ def DFS(draw, grid, start, end):
     visited = set()
     visited.add(start)
     came_from = {}
+    path_length = 0
+    explored_nodes = 0
 
     while stack:
         for event in pygame.event.get():
             if event.type == pygame.QUIT or pygame.key.get_pressed()[pygame.K_ESCAPE]:
-                return -1
+                return (-1, -1)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    return 0
+                    return (0, 0)
 
+        explored_nodes += 1
         current = stack.pop()
 
         if current == end:
-            draw_path(came_from, end, draw)
-            return 1
+            path_length = draw_path(came_from, end, draw)
+            return explored_nodes, path_length
 
         for neighbor in current.neighbors:
             if neighbor not in visited:
@@ -138,7 +148,7 @@ def DFS(draw, grid, start, end):
         if current != start:
             if current.color != ORANGE and current.color != TURQUOISE:
                 current.make_closed()
-    return 0
+    return explored_nodes, path_length
 
 def GBFS(draw, grid, start, end):
     def heuristic_cost_estimate(p1, p2):
@@ -158,20 +168,23 @@ def GBFS(draw, grid, start, end):
     visited = set()
     visited.add(start)
     came_from = {}
+    path_length = 0
+    explored_nodes = 0
 
     while not queue.empty():
         for event in pygame.event.get():
             if event.type == pygame.QUIT or pygame.key.get_pressed()[pygame.K_ESCAPE]:
-                return -1
+                return (-1, -1)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    return 0
+                    return (0, 0)
 
+        explored_nodes += 1
         current = queue.get()[1]
 
         if current == end:
-            draw_path(came_from, end, draw)
-            return 1
+            path_length = draw_path(came_from, end, draw)
+            return explored_nodes, path_length
 
         for neighbor in current.neighbors:
             if neighbor not in visited:
@@ -196,20 +209,23 @@ def Dijkstra(draw, grid, start, end):
     came_from = {}
     g_score = {node: float("inf") for row in grid for node in row}
     g_score[start] = 0
+    path_length = 0
+    explored_nodes = 0
 
     while not queue.empty():
         for event in pygame.event.get():
             if event.type == pygame.QUIT or pygame.key.get_pressed()[pygame.K_ESCAPE]:
-                return -1
+                return (-1, -1)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    return 0
+                    return (0, 0)
 
+        explored_nodes += 1
         current = queue.get()[1]
 
         if current == end:
-            draw_path(came_from, end, draw)
-            return 1
+            path_length = draw_path(came_from, end, draw)
+            return explored_nodes, path_length
 
         for neighbor in current.neighbors:
             temp_g_score = g_score[current] + 1
@@ -226,4 +242,4 @@ def Dijkstra(draw, grid, start, end):
         if current != start:
             if current.color != ORANGE and current.color != TURQUOISE:
                 current.make_closed()
-    return 0
+    return explored_nodes, path_length

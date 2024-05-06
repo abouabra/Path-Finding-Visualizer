@@ -6,8 +6,8 @@ import cProfile
 import random
 
 ROWS = 51
-assert ROWS % 2 != 0, "Rows must be odd!"
 DEFAULT_WIDTH = 600
+assert ROWS % 2 != 0, "Rows must be odd!"
 WIDTH = DEFAULT_WIDTH if DEFAULT_WIDTH % ROWS == 0 else DEFAULT_WIDTH - DEFAULT_WIDTH % ROWS
 WIN = pygame.display.set_mode((WIDTH + 400, WIDTH))
 pygame.display.set_caption("Path Finding Algorithm")
@@ -57,10 +57,8 @@ def get_clicked_pos(pos, rows, width):
 
 	return row, col
 
-def draw_panel(win):
-	# win.fill(WHITE)
-	
-	
+def draw_panel(win, nodes_explored, path_length):
+	pygame.draw.rect(win, WHITE, (WIDTH, 0, 400, WIDTH))
 	click_and_play = header_font.render("Click & Play!", True, (0, 0, 0))
 	win.blit(click_and_play, (WIDTH + 40, 20))
    
@@ -81,7 +79,10 @@ def draw_panel(win):
 		"C:",
 		"    Clear Board",
 		"Space:",
-		"    Start / Stop Algorithm"
+		"    Start / Stop Algorithm",
+		"     ",
+		f"Nodes Explored: {nodes_explored}",
+		f"Path Length: {path_length}"
 	]
 
 	text_surfaces = []
@@ -90,9 +91,9 @@ def draw_panel(win):
 	for i, line in enumerate(rules_lines):
 		font_color = (0, 0, 0)  # Default color
 
-		if "Start" in line:
+		if i == 1:
 			font_color = (255, 165, 0)  # Orange
-		elif "End" in line:
+		elif i == 2:
 			font_color = (64, 224, 208)  # Turquoise
 
 		text_surface = rules_font.render(line, True, font_color)
@@ -101,6 +102,8 @@ def draw_panel(win):
 
 	for surface, position in zip(text_surfaces, text_positions):
 		win.blit(surface, position)
+
+	update_algo(win, algo_index, rules_font)
 
 def update_algo(win, algo_index, rules_font):
 	pygame.draw.rect(win, WHITE, (WIDTH + 50, 425, 300, 50))
@@ -150,14 +153,15 @@ def game(win, width):
 
 	global algo_index
 	global start, end
+	explored_nodes = 0
+	path_length = 0
 	algorithms = [A_star, BFS, DFS, GBFS, Dijkstra]
 
 	finished = False
 	run = True
 	win.fill(GREY)
 	pygame.draw.rect(win, WHITE, (WIDTH, 0, 400, WIDTH))
-	draw_panel(win)
-	update_algo(win, algo_index, rules_font)
+	draw_panel(win, explored_nodes, path_length)
 
 	while run:
 		draw(win, grid, ROWS, width)
@@ -206,10 +210,10 @@ def game(win, width):
 						for node in row:
 							node.update_neighbors(grid)
 					
-					result = algorithms[algo_index](lambda: draw(win, grid, ROWS, width), grid, start, end)
-					if result == -1:
+					explored_nodes, path_length = algorithms[algo_index](lambda: draw(win, grid, ROWS, width), grid, start, end)
+					if explored_nodes == -1:
 						run = False
-
+					draw_panel(win, explored_nodes, path_length)
 					finished = True
 
 				if event.key == pygame.K_c: # Clear the all nodes
@@ -222,7 +226,7 @@ def game(win, width):
 
 				
 				if event.key == pygame.K_a:
-					algo_index = (algo_index + 1) % len(algorithms)  # Wrap around the list
+					algo_index = (algo_index + 1) % len(algorithms)
 					update_algo(win, algo_index, rules_font)
 
 				if event.key == pygame.K_m:
