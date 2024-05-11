@@ -2,7 +2,7 @@ import pygame
 from algorithms import A_star, BFS, DFS, GBFS, Dijkstra
 from maze import generate_maze
 from node import Node
-import cProfile
+import time
 import random
 
 ROWS = 51
@@ -14,6 +14,7 @@ pygame.display.set_caption("Path Finding Algorithm")
 pygame.font.init()
 header_font = pygame.font.Font("assets/Akshar-Regular.ttf", 70)
 rules_font = pygame.font.Font("assets/Akshar-Regular.ttf", 30)
+time_taken = 0
 
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
@@ -38,7 +39,7 @@ def make_grid(rows, width):
 
 	return grid
 
-def draw(win, grid, rows, width):
+def draw(win, grid):
 	for row in grid:
 		for node in row:
 			node.draw(win)
@@ -56,6 +57,68 @@ def get_clicked_pos(pos, rows, width):
 	col = x // gap
 
 	return row, col
+
+
+def convert_time(time_taken):
+	if time_taken < 1000:
+		return f"{round(time_taken, 2)}ns"
+	elif time_taken < 1000000:
+		return f"{round(time_taken / 1000, 2)}μs"
+	elif time_taken < 1000000000:
+		return f"{round(time_taken / 1000000, 2)}ms"
+	else:
+		return f"{round(time_taken / 1000000000, 2)}s"
+
+def draw_panel_2(win, nodes_explored, path_length, time_taken):
+	pygame.draw.rect(win, WHITE, (WIDTH + 1, 0, 399, WIDTH))
+	click_and_play = header_font.render("Click & Play!", True, (0, 0, 0))
+	win.blit(click_and_play, (WIDTH + 40, 20))
+   
+	have_fun = header_font.render("Have Fun!", True, (0, 0, 0))
+	win.blit(have_fun, (WIDTH + 77, 850))
+
+	time_taken = convert_time(time_taken)
+	rules_lines = [
+		"Left-click:",
+		"    Set Start (Orange) &",
+		"    End (Turquoise)",
+		"Drag:",
+		"    Draw Obstacles (Black)",
+		"A:",
+		"    Switch Algorithm",
+		"     ",
+		"M:",
+		"    Generate Random Map",
+		"C:",
+		"    Clear Board",
+		"Space:",
+		"    Start / Stop Algorithm",
+		"     ",
+		f"Nodes Explored: {nodes_explored}",
+		f"Path Length: {path_length}",
+		f"Time Taken: {time_taken}"
+	]
+
+	text_surfaces = []
+	text_positions = []
+
+	for i, line in enumerate(rules_lines):
+		font_color = (0, 0, 0)  # Default color
+
+		if i == 1:
+			font_color = (255, 165, 0)  # Orange
+		elif i == 2:
+			font_color = (64, 224, 208)  # Turquoise
+
+		text_surface = rules_font.render(line, True, font_color)
+		text_positions.append((WIDTH + 30, 120 + i * 40))
+		text_surfaces.append(text_surface)
+
+	for surface, position in zip(text_surfaces, text_positions):
+		win.blit(surface, position)
+
+	update_algo(win, algo_index, rules_font)
+
 
 def draw_panel(win, nodes_explored, path_length):
 	pygame.draw.rect(win, WHITE, (WIDTH, 0, 400, WIDTH))
@@ -147,12 +210,11 @@ def make_maze(grid, rows, width):
 	end.make_end()
 	grid[end_pos[1]][end_pos[0]] = end
 
-
 def game(win, width):
 	grid = make_grid(ROWS, width)
 
-	global algo_index
-	global start, end
+	global algo_index, start, end, time_taken
+
 	explored_nodes = 0
 	path_length = 0
 	algorithms = [A_star, BFS, DFS, GBFS, Dijkstra]
@@ -161,10 +223,11 @@ def game(win, width):
 	run = True
 	win.fill(GREY)
 	pygame.draw.rect(win, WHITE, (WIDTH, 0, 400, WIDTH))
-	draw_panel(win, explored_nodes, path_length)
+	draw_panel_2(win, explored_nodes, path_length, time_taken)
+
 
 	while run:
-		draw(win, grid, ROWS, width)
+		draw(win, grid)
 
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT or pygame.key.get_pressed()[pygame.K_ESCAPE]: # Quit the game
@@ -209,11 +272,14 @@ def game(win, width):
 					for row in grid:
 						for node in row:
 							node.update_neighbors(grid)
-					
-					explored_nodes, path_length = algorithms[algo_index](lambda: draw(win, grid, ROWS, width), grid, start, end)
+
+					star_time = time.time_ns()
+					explored_nodes, path_length = algorithms[algo_index](lambda: draw(win, grid), grid, start, end)
+					end_time = time.time_ns()
 					if explored_nodes == -1:
 						run = False
-					draw_panel(win, explored_nodes, path_length)
+					time_taken = end_time - star_time
+					draw_panel_2(win, explored_nodes, path_length, time_taken)
 					finished = True
 
 				if event.key == pygame.K_c: # Clear the all nodes
