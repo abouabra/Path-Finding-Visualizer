@@ -169,7 +169,7 @@ def draw_panel(win, nodes_explored, path_length):
 	update_algo(win, algo_index, rules_font)
 
 def update_algo(win, algo_index, rules_font):
-	pygame.draw.rect(win, WHITE, (WIDTH + 50, 425, 300, 50))
+	pygame.draw.rect(win, WHITE, (WIDTH + 50, 390, 300, 50))
 	algo_text_surfaces = []
 	algo_text_positions = []
 	algorithms = ["A*", "BFS", "DFS", "GBFS", "Dijkstra"]
@@ -182,7 +182,7 @@ def update_algo(win, algo_index, rules_font):
 		algo = f"{algo}/" if i < len(algorithms) - 1 else algo
 		text_surface = rules_font.render(algo, True, font_color)
 		algo_text_surfaces.append(text_surface)
-		text_position = (WIDTH + 53 + len(total_algo) * 13 , 430)
+		text_position = (WIDTH + 53 + len(total_algo) * 13 , 395)
 		total_algo += algo
 		algo_text_positions.append(text_position)
 
@@ -306,7 +306,4 @@ def game(win, width):
 	pygame.quit()
 
 if __name__ == "__main__":
-	# with cProfile.Profile() as pr:
-		game(WIN, WIDTH)
-	# pr.print_stats(sort="cumtime")
-	# pr.dump_stats("profile_results.prof")
+	game(WIN, WIDTH)
